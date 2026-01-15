@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"strconv"
 
@@ -11,6 +12,7 @@ import (
 
 type WinNotifyHandler struct {
 	Budget *budget.Service
+	Secret string
 }
 
 type winRequest struct {
@@ -24,8 +26,25 @@ func (h *WinNotifyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	signature := r.Header.Get("X-Signature")
+	if signature == "" {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if !verifyHMAC(h.Secret, body, signature) {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
 	var req winRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err = json.NewDecoder(r.Body).Decode(&req); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
