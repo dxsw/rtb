@@ -27,7 +27,7 @@ func (p *Pipeline) Process(request *domain.BidRequest, snapshot *store.Snapshot,
 
 	filtered := candidates[:0]
 	for _, candidate := range candidates {
-		if checker.CanBid(candidate.CampaignID, candidate.Price) && pacer.ShouldBid(candidate.CampaignID) {
+		if checker.CanBid(candidate.CampaignID, candidate.Price) && pacer.ShouldBid(candidate.CampaignID, candidate.Price) {
 			filtered = append(filtered, candidate)
 		}
 	}

@@ -13,9 +13,12 @@ type Pacer struct {
 	Snapshot *store.Snapshot
 	States   map[int]*budget.State
 	Clock    Clock
+
+	MaxBidFraction float64
+	Tolerance      float64
 }
 
-func (p *Pacer) ShouldBid(campaignID int) bool {
+func (p *Pacer) ShouldBid(campaignID int, price float64) bool {
 	campaign := p.Snapshot.CampaignByID[campaignID]
 	if campaign == nil {
 		return false
@@ -36,8 +39,18 @@ func (p *Pacer) ShouldBid(campaignID int) bool {
 	now := p.Clock.Now()
 
 	expected := expectedSpend(dailyCap, now)
+	allowed := expected * p.Tolerance
 
-	return spent <= expected
+	if spent+price > allowed {
+		return false
+	}
+
+	maxBid := dailyCap * p.MaxBidFraction
+	if price > maxBid {
+		return false
+	}
+
+	return true
 }
 
 func expectedSpend(dailyCap float64, now time.Time) float64 {
