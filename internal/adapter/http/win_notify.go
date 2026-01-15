@@ -3,8 +3,10 @@ package http
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"gitlab.com/radix-ads/rtb/internal/budget"
+	"gitlab.com/radix-ads/rtb/internal/metrics"
 )
 
 type WinNotifyHandler struct {
@@ -34,6 +36,9 @@ func (h *WinNotifyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.Budget.OnWin(req.CampaignID, req.Price)
+
+	metrics.WinsTotal.WithLabelValues(strconv.Itoa(req.CampaignID)).Inc()
+	metrics.SpendTotal.WithLabelValues(strconv.Itoa(req.CampaignID)).Add(req.Price)
 
 	w.WriteHeader(http.StatusNoContent)
 }
