@@ -1,0 +1,7 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: "rtb-bidder"
+    static_configs:
+      - targets: ["bidder:8080"]
