@@ -1,8 +1,8 @@
 package domain
 
 type Budget struct {
-	DailyLimit float64
-	SpentToday float64
+	DailyCap float64
+	TotalCap float64
 }
 
 type PacingState struct {
