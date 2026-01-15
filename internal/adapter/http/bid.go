@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"time"
 
 	"gitlab.com/radix-ads/rtb/internal/adapter/openrtb"
 	"gitlab.com/radix-ads/rtb/internal/engine"
+	"gitlab.com/radix-ads/rtb/internal/metrics"
 )
 
 type BidHandler struct {
@@ -31,7 +33,14 @@ func (h *BidHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	metrics.BidsTotal.Inc()
+
+	start := time.Now()
+
 	response := h.Engine.Process(request)
+
+	metrics.BidLatency.Observe(float64(time.Since(start).Milliseconds()))
+
 	if response == nil {
 		w.WriteHeader(http.StatusNoContent)
 		return
