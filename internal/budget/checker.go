@@ -7,12 +7,24 @@ import (
 )
 
 type Checker struct {
-	snapshot *store.Snapshot
+	snapshot *store.AtomicSnapshot
 	states   map[int]*State
 }
 
+func NewChecker(snapshot *store.AtomicSnapshot, states map[int]*State) *Checker {
+	return &Checker{
+		snapshot: snapshot,
+		states:   states,
+	}
+}
+
 func (c *Checker) CanBid(campaignID int, price float64) bool {
-	campaign := c.snapshot.CampaignByID[campaignID]
+	snap := c.snapshot.Load()
+	if snap == nil {
+		return false
+	}
+
+	campaign := snap.CampaignByID[campaignID]
 	if campaign == nil {
 		return false
 	}
