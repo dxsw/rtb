@@ -44,7 +44,7 @@ func (h *WinNotifyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req winRequest
-	if err = json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err = json.Unmarshal(body, &req); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
