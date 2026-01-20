@@ -5,10 +5,12 @@ services:
     image: rtb-bidder
     ports:
       - "8080:8080"
+    env_file:
+      - .env
 
   prometheus:
     image: prom/prometheus
     volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./internal/infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
       - "9090:9090"
