@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"sync/atomic"
 	"time"
 )
@@ -23,20 +24,26 @@ func (s *AtomicSnapshot) Store(snapshot *Snapshot) {
 	s.value.Store(snapshot)
 }
 
-func StartReloadLoop(atomic *AtomicSnapshot, loader Loader, interval time.Duration) {
+func StartReloadLoop(ctx context.Context, atomic *AtomicSnapshot, loader Loader, interval time.Duration) {
 	go func() {
 		ticker := time.NewTicker(interval)
 		defer ticker.Stop()
 
-		for range ticker.C {
-			campaigns, err := loader.LoadCampaigns()
-			if err != nil {
-				// TODO: log error
-				continue
-			}
+		for {
+			select {
+			case <-ticker.C:
+				campaigns, err := loader.LoadCampaigns()
+				if err != nil {
+					// TODO: log error
+					continue
+				}
 
-			snapshot := BuildSnapshot(campaigns)
-			atomic.Store(snapshot)
+				snapshot := BuildSnapshot(campaigns)
+				atomic.Store(snapshot)
+
+			case <-ctx.Done():
+				return
+			}
 		}
 	}()
 }

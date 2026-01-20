@@ -1,6 +1,7 @@
 package budget
 
 import (
+	"context"
 	"sync/atomic"
 	"time"
 )
@@ -9,11 +10,19 @@ type DailyResetter struct {
 	States map[int]*State
 }
 
-func (r *DailyResetter) Start() {
+func (r *DailyResetter) Start(ctx context.Context) {
 	go func() {
 		for {
-			sleepUntilNextDay()
-			r.reset()
+			duration := timeUntilNextDay()
+
+			timer := time.NewTimer(duration)
+			select {
+			case <-timer.C:
+				r.reset()
+			case <-ctx.Done():
+				timer.Stop()
+				return
+			}
 		}
 	}()
 }
@@ -24,7 +33,7 @@ func (r *DailyResetter) reset() {
 	}
 }
 
-func sleepUntilNextDay() {
+func timeUntilNextDay() time.Duration {
 	now := time.Now()
 	next := time.Date(
 		now.Year(),
@@ -33,5 +42,5 @@ func sleepUntilNextDay() {
 		0, 0, 0, 0,
 		now.Location(),
 	)
-	time.Sleep(time.Until(next))
+	return time.Until(next)
 }

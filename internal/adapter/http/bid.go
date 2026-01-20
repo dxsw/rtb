@@ -37,7 +37,7 @@ func (h *BidHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	start := time.Now()
 
-	response := h.Engine.Process(request)
+	response := h.Engine.Process(r.Context(), request)
 
 	metrics.BidLatency.Observe(float64(time.Since(start).Milliseconds()))
 

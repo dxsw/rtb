@@ -1,10 +1,14 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	rtbHTTP "gitlab.com/radix-ads/rtb/internal/adapter/http"
@@ -12,12 +16,16 @@ import (
 	"gitlab.com/radix-ads/rtb/internal/engine"
 	"gitlab.com/radix-ads/rtb/internal/engine/pipeline"
 	"gitlab.com/radix-ads/rtb/internal/metrics"
+	"gitlab.com/radix-ads/rtb/internal/middleware"
 	"gitlab.com/radix-ads/rtb/internal/pacing"
 	"gitlab.com/radix-ads/rtb/internal/store"
 )
 
 func main() {
 	fmt.Println("RTB bidder starting...")
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
 	loader := store.NewStaticLoader()
 	campaigns, err := loader.LoadCampaigns()
@@ -28,7 +36,14 @@ func main() {
 	snapshot := store.BuildSnapshot(campaigns)
 	atomicSnapshot := store.NewAtomicSnapshot(snapshot)
 
+	store.StartReloadLoop(ctx, atomicSnapshot, loader, 30*time.Second)
+
 	budgetStates := budget.BuildStates(campaigns)
+
+	resetter := &budget.DailyResetter{
+		States: budgetStates,
+	}
+	resetter.Start(ctx)
 
 	budgetService := budget.NewService(budgetStates)
 	budgetChecker := budget.NewChecker(atomicSnapshot, budgetStates)
@@ -61,9 +76,11 @@ func main() {
 		Secret: os.Getenv("WIN_NOTIFY_SECRET"),
 	}
 
+	drain := &middleware.Drain{}
+
 	mux := http.NewServeMux()
-	mux.Handle("/bid", bidHandler)
-	mux.Handle("/win", winHandler)
+	mux.Handle("/bid", drain.Middleware(bidHandler))
+	mux.Handle("/win", drain.Middleware(winHandler))
 	mux.Handle("/metrics", metrics.Handler())
 
 	server := &http.Server{
@@ -75,5 +92,25 @@ func main() {
 	}
 
 	log.Println("Listening on ", server.Addr)
-	log.Fatal(server.ListenAndServe())
+	go func() {
+		if err = server.ListenAndServe(); err != nil && !errors.Is(http.ErrServerClosed, err) {
+			log.Fatalf("listen: %s\n", err)
+		}
+	}()
+
+	<-ctx.Done()
+	log.Println("shutdown initiated")
+
+	drain.Close()
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err = server.Shutdown(shutdownCtx); err != nil {
+		log.Printf("server shutdown failed: %v\n", err)
+	}
+
+	drain.Wait()
+
+	log.Println("shutdown complete")
 }

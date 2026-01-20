@@ -1,6 +1,8 @@
 package pipeline
 
 import (
+	"context"
+
 	"gitlab.com/radix-ads/rtb/internal/budget"
 	"gitlab.com/radix-ads/rtb/internal/domain"
 	"gitlab.com/radix-ads/rtb/internal/engine/matcher"
@@ -19,7 +21,13 @@ func New(campaigns []domain.Campaign) *Pipeline {
 	}
 }
 
-func (p *Pipeline) Process(request *domain.BidRequest, snapshot *store.Snapshot, checker *budget.Checker, pacer *pacing.Pacer) *domain.BidResponse {
+func (p *Pipeline) Process(ctx context.Context, request *domain.BidRequest, snapshot *store.Snapshot, checker *budget.Checker, pacer *pacing.Pacer) *domain.BidResponse {
+	select {
+	case <-ctx.Done():
+		return nil
+	default:
+	}
+
 	candidates := matcher.Match(request, snapshot.Campaigns)
 	if len(candidates) == 0 {
 		return nil
@@ -27,6 +35,12 @@ func (p *Pipeline) Process(request *domain.BidRequest, snapshot *store.Snapshot,
 
 	filtered := candidates[:0]
 	for _, candidate := range candidates {
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
+		}
+
 		if checker.CanBid(candidate.CampaignID, candidate.Price) && pacer.ShouldBid(candidate.CampaignID, candidate.Price) {
 			filtered = append(filtered, candidate)
 		}
