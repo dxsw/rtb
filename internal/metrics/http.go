@@ -7,5 +7,8 @@ import (
 )
 
 func Handler() http.Handler {
-	return promhttp.Handler()
+	return promhttp.HandlerFor(
+		Registry,
+		promhttp.HandlerOpts{},
+	)
 }
