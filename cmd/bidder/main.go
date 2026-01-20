@@ -77,9 +77,12 @@ func main() {
 	}
 
 	drain := &middleware.Drain{}
+	timeout := &middleware.Timeout{
+		Duration: 20 * time.Millisecond,
+	}
 
 	mux := http.NewServeMux()
-	mux.Handle("/bid", drain.Middleware(bidHandler))
+	mux.Handle("/bid", timeout.Middleware(drain.Middleware(bidHandler)))
 	mux.Handle("/win", drain.Middleware(winHandler))
 	mux.Handle("/metrics", metrics.Handler())
 
