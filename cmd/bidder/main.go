@@ -81,7 +81,15 @@ func main() {
 		Duration: 20 * time.Millisecond,
 	}
 
+	healthHandler := &rtbHTTP.HealthHandler{}
+	readyHandler := &rtbHTTP.ReadinessHandler{
+		Snapshot: atomicSnapshot,
+		Drain:    drain,
+	}
+
 	mux := http.NewServeMux()
+	mux.Handle("/healthz", healthHandler)
+	mux.Handle("/readyz", readyHandler)
 	mux.Handle("/bid", timeout.Middleware(drain.Middleware(bidHandler)))
 	mux.Handle("/win", drain.Middleware(winHandler))
 	mux.Handle("/metrics", metrics.Handler())

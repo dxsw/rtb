@@ -32,3 +32,7 @@ func (d *Drain) Close() {
 func (d *Drain) Wait() {
 	d.wg.Wait()
 }
+
+func (d *Drain) IsDraining() bool {
+	return d.closed.Load()
+}
