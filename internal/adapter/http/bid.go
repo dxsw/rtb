@@ -8,11 +8,13 @@ import (
 
 	"gitlab.com/radix-ads/rtb/internal/adapter/openrtb"
 	"gitlab.com/radix-ads/rtb/internal/engine"
+	"gitlab.com/radix-ads/rtb/internal/kafka"
 	"gitlab.com/radix-ads/rtb/internal/metrics"
 )
 
 type BidHandler struct {
-	Engine *engine.Engine
+	Engine   *engine.Engine
+	Producer *kafka.Producer
 }
 
 func (h *BidHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -42,9 +44,26 @@ func (h *BidHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	metrics.BidLatency.Observe(float64(time.Since(start).Milliseconds()))
 
 	if response == nil {
+		metrics.NoBidTotal.Inc()
+
+		_ = h.Producer.Publish(r.Context(), request.ID, kafka.BidEvent{
+			RequestID: request.ID,
+			Outcome:   "nobid",
+			Timestamp: time.Now(),
+		})
+
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
+
+	_ = h.Producer.Publish(r.Context(), request.ID, kafka.BidEvent{
+		RequestID:  request.ID,
+		CampaignID: response.CampaignID,
+		CreativeID: response.Creative.ID,
+		Price:      response.Price,
+		Outcome:    "win",
+		Timestamp:  time.Now(),
+	})
 
 	openRTBResponse := openrtb.BuildResponse(request, response)
 	if openRTBResponse == nil {

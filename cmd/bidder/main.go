@@ -15,6 +15,7 @@ import (
 	"gitlab.com/radix-ads/rtb/internal/budget"
 	"gitlab.com/radix-ads/rtb/internal/engine"
 	"gitlab.com/radix-ads/rtb/internal/engine/pipeline"
+	"gitlab.com/radix-ads/rtb/internal/kafka"
 	"gitlab.com/radix-ads/rtb/internal/metrics"
 	"gitlab.com/radix-ads/rtb/internal/middleware"
 	"gitlab.com/radix-ads/rtb/internal/pacing"
@@ -64,16 +65,27 @@ func main() {
 		Pacer:    pacer,
 	}
 
+	producer := kafka.NewProducer(
+		[]string{os.Getenv("KAFKA_BROKERS")},
+		os.Getenv("KAFKA_TOPIC"),
+	)
+
+	defer func(producer *kafka.Producer) {
+		_ = producer.Close()
+	}(producer)
+
 	metrics.RegisterBid()
 	metrics.RegisterWin()
 
 	bidHandler := &rtbHTTP.BidHandler{
-		Engine: eng,
+		Engine:   eng,
+		Producer: producer,
 	}
 
 	winHandler := &rtbHTTP.WinNotifyHandler{
-		Budget: budgetService,
-		Secret: os.Getenv("WIN_NOTIFY_SECRET"),
+		Budget:   budgetService,
+		Producer: producer,
+		Secret:   os.Getenv("WIN_NOTIFY_SECRET"),
 	}
 
 	drain := &middleware.Drain{}

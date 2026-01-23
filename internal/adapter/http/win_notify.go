@@ -5,14 +5,17 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"time"
 
 	"gitlab.com/radix-ads/rtb/internal/budget"
+	"gitlab.com/radix-ads/rtb/internal/kafka"
 	"gitlab.com/radix-ads/rtb/internal/metrics"
 )
 
 type WinNotifyHandler struct {
-	Budget *budget.Service
-	Secret string
+	Budget   *budget.Service
+	Producer *kafka.Producer
+	Secret   string
 }
 
 type winRequest struct {
@@ -55,6 +58,12 @@ func (h *WinNotifyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.Budget.OnWin(req.CampaignID, req.Price)
+
+	_ = h.Producer.Publish(r.Context(), "win", kafka.WinEvent{
+		CampaignID: req.CampaignID,
+		Price:      req.Price,
+		Timestamp:  time.Now(),
+	})
 
 	metrics.WinsTotal.WithLabelValues(strconv.Itoa(req.CampaignID)).Inc()
 	metrics.SpendTotal.WithLabelValues(strconv.Itoa(req.CampaignID)).Add(req.Price)

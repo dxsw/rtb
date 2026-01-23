@@ -52,8 +52,9 @@ func (p *Pipeline) Process(ctx context.Context, request *domain.BidRequest, snap
 	}
 
 	return &domain.BidResponse{
-		RequestID: request.ID,
-		Price:     winner.Price,
-		Creative:  p.findCreative(winner),
+		RequestID:  request.ID,
+		Price:      winner.Price,
+		Creative:   p.findCreative(winner),
+		CampaignID: winner.CampaignID,
 	}
 }
