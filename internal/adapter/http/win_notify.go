@@ -60,6 +60,7 @@ func (h *WinNotifyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.Budget.OnWin(req.CampaignID, req.Price)
 
 	_ = h.Producer.Publish(r.Context(), "win", kafka.WinEvent{
+		EventType:  "win",
 		CampaignID: req.CampaignID,
 		Price:      req.Price,
 		Timestamp:  time.Now(),

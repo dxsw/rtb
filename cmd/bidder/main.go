@@ -15,6 +15,7 @@ import (
 	"gitlab.com/radix-ads/rtb/internal/budget"
 	"gitlab.com/radix-ads/rtb/internal/engine"
 	"gitlab.com/radix-ads/rtb/internal/engine/pipeline"
+	"gitlab.com/radix-ads/rtb/internal/infra/clickhouse"
 	"gitlab.com/radix-ads/rtb/internal/kafka"
 	"gitlab.com/radix-ads/rtb/internal/metrics"
 	"gitlab.com/radix-ads/rtb/internal/middleware"
@@ -73,6 +74,21 @@ func main() {
 	defer func(producer *kafka.Producer) {
 		_ = producer.Close()
 	}(producer)
+
+	clickHouseConsumer, err := clickhouse.NewConsumer(
+		[]string{os.Getenv("KAFKA_BROKERS")},
+		os.Getenv("KAFKA_TOPIC"),
+		"bidder-analytics",
+		os.Getenv("CLICKHOUSE_DSN"),
+	)
+	if err != nil {
+		log.Fatalf("failed to create ClickHouse consumer: %v", err)
+	}
+	clickHouseConsumer.Start(ctx)
+
+	defer func(clickHouseConsumer *clickhouse.Consumer) {
+		_ = clickHouseConsumer.Close()
+	}(clickHouseConsumer)
 
 	metrics.RegisterBid()
 	metrics.RegisterWin()
