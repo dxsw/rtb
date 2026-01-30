@@ -15,6 +15,7 @@ import (
 	"gitlab.com/radix-ads/rtb/internal/budget"
 	"gitlab.com/radix-ads/rtb/internal/engine"
 	"gitlab.com/radix-ads/rtb/internal/engine/pipeline"
+	"gitlab.com/radix-ads/rtb/internal/fraud"
 	"gitlab.com/radix-ads/rtb/internal/infra/clickhouse"
 	"gitlab.com/radix-ads/rtb/internal/kafka"
 	"gitlab.com/radix-ads/rtb/internal/metrics"
@@ -90,11 +91,15 @@ func main() {
 		_ = clickHouseConsumer.Close()
 	}(clickHouseConsumer)
 
+	fraudGuard := fraud.NewGuard()
+
 	metrics.RegisterBid()
 	metrics.RegisterWin()
+	metrics.RegisterFraud()
 
 	bidHandler := &rtbHTTP.BidHandler{
 		Engine:   eng,
+		Fraud:    fraudGuard,
 		Producer: producer,
 	}
 

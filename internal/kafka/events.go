@@ -10,6 +10,7 @@ type BidEvent struct {
 	CreativeID   int       `json:"creative_id,omitempty"`
 	Price        float64   `json:"price,omitempty"`
 	Outcome      string    `json:"outcome"`
+	Reason       string    `json:"reason"` // TODO: save reason in ClickHouse
 	Exchange     string    `json:"exchange,omitempty"`
 	SiteDomain   string    `json:"site_domain,omitempty"`
 	AppBundle    string    `json:"app_bundle,omitempty"`

@@ -8,12 +8,14 @@ import (
 
 	"gitlab.com/radix-ads/rtb/internal/adapter/openrtb"
 	"gitlab.com/radix-ads/rtb/internal/engine"
+	"gitlab.com/radix-ads/rtb/internal/fraud"
 	"gitlab.com/radix-ads/rtb/internal/kafka"
 	"gitlab.com/radix-ads/rtb/internal/metrics"
 )
 
 type BidHandler struct {
 	Engine   *engine.Engine
+	Fraud    *fraud.Guard
 	Producer *kafka.Producer
 }
 
@@ -36,6 +38,22 @@ func (h *BidHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	metrics.BidsTotal.Inc()
+
+	isFraud, reason := h.Fraud.IsFraud(request)
+	if isFraud {
+		metrics.FraudTotal.WithLabelValues(reason).Inc()
+
+		_ = h.Producer.Publish(r.Context(), request.ID, kafka.BidEvent{
+			EventType: "bid",
+			RequestID: request.ID,
+			Outcome:   "fraud",
+			Reason:    reason,
+			Timestamp: time.Now(),
+		})
+
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
 
 	start := time.Now()
 
