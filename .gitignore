@@ -1,0 +1,5 @@
+# IDE configuration folder
+.idea/
+
+# Secrets
+.env
