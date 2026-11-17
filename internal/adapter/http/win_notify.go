@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"gitlab.com/radix-ads/rtb/internal/budget"
-	"gitlab.com/radix-ads/rtb/internal/kafka"
+	"gitlab.com/radix-ads/rtb/internal/infra/kafka"
 	"gitlab.com/radix-ads/rtb/internal/metrics"
 )
 

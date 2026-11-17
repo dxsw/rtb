@@ -9,7 +9,7 @@ import (
 	"gitlab.com/radix-ads/rtb/internal/adapter/openrtb"
 	"gitlab.com/radix-ads/rtb/internal/engine"
 	"gitlab.com/radix-ads/rtb/internal/fraud"
-	"gitlab.com/radix-ads/rtb/internal/kafka"
+	"gitlab.com/radix-ads/rtb/internal/infra/kafka"
 	"gitlab.com/radix-ads/rtb/internal/metrics"
 )
 

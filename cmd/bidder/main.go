@@ -17,7 +17,7 @@ import (
 	"gitlab.com/radix-ads/rtb/internal/engine/pipeline"
 	"gitlab.com/radix-ads/rtb/internal/fraud"
 	"gitlab.com/radix-ads/rtb/internal/infra/clickhouse"
-	"gitlab.com/radix-ads/rtb/internal/kafka"
+	"gitlab.com/radix-ads/rtb/internal/infra/kafka"
 	"gitlab.com/radix-ads/rtb/internal/metrics"
 	"gitlab.com/radix-ads/rtb/internal/middleware"
 	"gitlab.com/radix-ads/rtb/internal/pacing"
